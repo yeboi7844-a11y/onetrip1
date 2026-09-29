@@ -1,6 +1,6 @@
 "use client";
 
-import { DemoOne } from "@/components/ui/demo";
+import { RadialBackground } from "@/components/ui/light-theme-tailwind-css-background-snippet";
 import { useMemo, useState } from "react";
 import { services, type Service } from "../data/services";
 
@@ -41,8 +41,9 @@ export default function Home() {
     if (!selected) return;
     setBusy(true);
     setError("");
+
     try {
-      const r = await fetch("/api/readiness", {
+      const response = await fetch("/api/readiness", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -52,8 +53,8 @@ export default function Home() {
         }),
       });
 
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || "Could not check");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not check");
       setResult(data.result);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unexpected error");
@@ -72,20 +73,22 @@ export default function Home() {
   }
 
   return (
-    <>
-      <header className="top">
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900">
+      <RadialBackground />
+
+      <header className="top relative z-10">
         <div className="wrap">
           <div className="brand">OneTrip</div>
         </div>
       </header>
 
-      <section className="hero">
+      <section className="hero relative z-10">
         <div className="wrap">
           <p>GOVERNMENT-SERVICE READINESS CHECKER</p>
           <h1>Know what could stop you before you leave home.</h1>
           <p>
-            Choose a service, review the checklist, and check the demo readiness details before visiting an
-            office.
+            Choose a service, review the checklist, and check the demo readiness details before
+            visiting an office.
           </p>
           <div className="search">
             <input
@@ -104,11 +107,7 @@ export default function Home() {
         </div>
       </section>
 
-      <main className="wrap">
-        <section className="card">
-          <DemoOne />
-        </section>
-
+      <main className="wrap relative z-10">
         <section className="card" id="services">
           <h2>1. Choose a service</h2>
           <p className="muted">Edit the sample services in data/services.ts.</p>
@@ -159,22 +158,22 @@ export default function Home() {
             <section className="card">
               <h2>3. Document checklist</h2>
               <p>Tick the documents you already have.</p>
-              {selected.documents.map((document) => (
-                <label className="check" key={document.id}>
+              {selected.documents.map((doc) => (
+                <label className="check" key={doc.id}>
                   <input
                     type="checkbox"
-                    checked={checked.includes(document.id)}
+                    checked={checked.includes(doc.id)}
                     onChange={() =>
                       setChecked((old) =>
-                        old.includes(document.id) ? old.filter((x) => x !== document.id) : [...old, document.id]
+                        old.includes(doc.id) ? old.filter((x) => x !== doc.id) : [...old, doc.id],
                       )
                     }
                   />
                   <span>
-                    <b>{document.name}</b>
+                    <b>{doc.name}</b>
                     <br />
                     <span className="muted">
-                      {document.original ? "Bring original" : "Copy/photo"} · {document.copies} copy/copies
+                      {doc.original ? "Bring original" : "Copy/photo"} · {doc.copies} copy/copies
                     </span>
                   </span>
                 </label>
@@ -245,6 +244,7 @@ export default function Home() {
                   <b>{selected.form}</b>
                 </div>
               </div>
+
               <p>
                 <a href={selected.officialSource} target="_blank" rel="noreferrer">
                   Open official source ↗
@@ -257,7 +257,9 @@ export default function Home() {
         {result && (
           <section className={`card status ${result.status}`} aria-live="polite">
             <p className="muted">YOUR RESULT</p>
-            <h2>{result.status === "READY" ? "✓ READY" : result.status === "VERIFY" ? "⚠ VERIFY" : "✕ BLOCKED"}</h2>
+            <h2>
+              {result.status === "READY" ? "✓ READY" : result.status === "VERIFY" ? "⚠ VERIFY" : "✕ BLOCKED"}
+            </h2>
             <p>
               {result.status === "READY"
                 ? "Demo checklist passed. Confirm official details before travelling."
@@ -269,14 +271,22 @@ export default function Home() {
             {!!result.blockers.length && (
               <>
                 <b>Blockers</b>
-                <ul>{result.blockers.map((x) => <li key={x}>{x}</li>)}</ul>
+                <ul>
+                  {result.blockers.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
               </>
             )}
 
             {!!result.warnings.length && (
               <>
                 <b>Verify before leaving</b>
-                <ul>{result.warnings.map((x) => <li key={x}>{x}</li>)}</ul>
+                <ul>
+                  {result.warnings.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
               </>
             )}
 
@@ -288,6 +298,7 @@ export default function Home() {
                   ? "Confirm the warnings first."
                   : "Demo rules indicate you should not go yet."}
             </p>
+
             <button className="btn soft" onClick={reset}>
               Check another service
             </button>
@@ -295,11 +306,10 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="wrap">
-        OneTrip beginner demo · Sample data is illustrative and may be inaccurate. Confirm documents, fees, office
-        hours and appointments with official sources.
+      <footer className="wrap relative z-10">
+        OneTrip beginner demo · Sample data is illustrative and may be inaccurate. Confirm documents,
+        fees, office hours and appointments with official sources.
       </footer>
-    </>
+    </div>
   );
 }
-
