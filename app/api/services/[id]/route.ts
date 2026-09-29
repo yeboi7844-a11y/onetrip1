@@ -1,0 +1,2 @@
+import {NextResponse} from "next/server";import {getService} from "../../../../data/services";
+export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){const {id}=await params;const service=getService(id);return service?NextResponse.json({service}):NextResponse.json({error:"Service not found"},{status:404})}

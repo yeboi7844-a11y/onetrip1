@@ -1,0 +1,2 @@
+import {NextResponse} from "next/server";import {services} from "../../../data/services";
+export async function GET(req:Request){const q=(new URL(req.url).searchParams.get("q")||"").trim().toLowerCase();const found=q?services.filter(s=>`${s.name} ${s.organisation} ${s.description}`.toLowerCase().includes(q)):services;return NextResponse.json({services:found})}
