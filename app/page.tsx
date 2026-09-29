@@ -1,15 +1,305 @@
 "use client";
-import {useMemo,useState} from "react";import {services,type Service} from "../data/services";
-type Result={status:"READY"|"VERIFY"|"BLOCKED";blockers:string[];warnings:string[];officeOpenNow:boolean;canGoNow:"GO"|"VERIFY"|"DONT_GO"};
-export default function Home(){const[q,setQ]=useState("");const[selected,setSelected]=useState<Service|null>(null);const[checked,setChecked]=useState<string[]>([]);const[appointment,setAppointment]=useState(false);const[result,setResult]=useState<Result|null>(null);const[busy,setBusy]=useState(false);const[error,setError]=useState("");
-const matches=useMemo(()=>{const s=q.trim().toLowerCase();return s?services.filter(x=>`${x.name} ${x.organisation} ${x.description}`.toLowerCase().includes(s)):services},[q]);
-function choose(s:Service){setSelected(s);setQ(s.name);setChecked([]);setAppointment(false);setResult(null);setError("")}
-async function check(){if(!selected)return;setBusy(true);setError("");try{const r=await fetch("/api/readiness",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({serviceId:selected.id,checkedDocumentIds:checked,appointmentConfirmed:appointment})});const data=await r.json();if(!r.ok)throw new Error(data.error||"Could not check");setResult(data.result)}catch(e){setError(e instanceof Error?e.message:"Unexpected error")}finally{setBusy(false)}}
-function reset(){setQ("");setSelected(null);setChecked([]);setAppointment(false);setResult(null);setError("")}
-return <><header className="top"><div className="wrap"><div className="brand">OneTrip</div></div></header><section className="hero"><div className="wrap"><p>GOVERNMENT-SERVICE READINESS CHECKER</p><h1>Know what could stop you before you leave home.</h1><p>Choose a service, review the checklist, and check the demo readiness details before visiting an office.</p><div className="search"><input className="field" placeholder="Search e.g. Income Certificate" value={q} onChange={e=>setQ(e.target.value)}/><button className="btn primary" onClick={()=>document.getElementById("services")?.scrollIntoView({behavior:"smooth"})}>Search</button></div></div></section><main className="wrap">
-<section className="card" id="services"><h2>1. Choose a service</h2><p className="muted">Edit the sample services in data/services.ts.</p><div className="options">{matches.map(s=><button className="option" key={s.id} onClick={()=>choose(s)}><strong>{s.name}</strong><br/><span className="muted">{s.organisation} · {s.district}, {s.state}</span></button>)}{!matches.length&&<p>No matches. Try another search.</p>}</div></section>
-{selected&&<><section className="card"><h2>2. Office details</h2><div className="grid"><div><p className="muted">Organisation</p><b>{selected.organisation}</b></div><div><p className="muted">Location</p><b>{selected.district}, {selected.state}</b></div><div><p className="muted">Office</p><b>{selected.office}</b></div><div><p className="muted">Address</p><b>{selected.address}</b></div></div><p>{selected.description}</p><p><b>Eligibility:</b> {selected.eligibility.join(" ")}</p></section>
-<section className="card"><h2>3. Document checklist</h2><p>Tick the documents you already have.</p>{selected.documents.map(d=><label className="check" key={d.id}><input type="checkbox" checked={checked.includes(d.id)} onChange={()=>setChecked(old=>old.includes(d.id)?old.filter(x=>x!==d.id):[...old,d.id])}/><span><b>{d.name}</b><br/><span className="muted">{d.original?"Bring original":"Copy/photo"} · {d.copies} copy/copies</span></span></label>)}{selected.appointmentRequired&&<label className="check"><input type="checkbox" checked={appointment} onChange={e=>setAppointment(e.target.checked)}/><span><b>I have a confirmed appointment</b><br/><span className="muted">This records your answer; it does not verify a real booking.</span></span></label>}<div className="actions"><button className="btn primary" onClick={check} disabled={busy}>{busy?"Checking…":"Check readiness"}</button><button className="btn soft" onClick={reset}>Start over</button></div>{error&&<p role="alert">{error}</p>}</section>
-<section className="card"><h2>4. Service information</h2><div className="meta"><div><span className="muted">Indicative demo fee</span><br/><b>₹{selected.fee}</b></div><div><span className="muted">Listed demo hours</span><br/><b>{selected.workingHours.open}–{selected.workingHours.close}</b></div><div><span className="muted">Payment</span><br/><b>{selected.paymentModes.join(", ")}</b></div><div><span className="muted">Last marked verified</span><br/><b>{selected.lastVerified}</b></div><div><span className="muted">Counter</span><br/><b>{selected.counter}</b></div><div><span className="muted">Form</span><br/><b>{selected.form}</b></div></div><p><a href={selected.officialSource} target="_blank" rel="noreferrer">Open official source ↗</a></p></section></>}
-{result&&<section className={`card status ${result.status}`} aria-live="polite"><p className="muted">YOUR RESULT</p><h2>{result.status==="READY"?"✓ READY":result.status==="VERIFY"?"⚠ VERIFY":"✕ BLOCKED"}</h2><p>{result.status==="READY"?"Demo checklist passed. Confirm official details before travelling.":result.status==="VERIFY"?"Some details need confirmation before travel.":"One or more checklist or schedule items may prevent a successful visit."}</p>{!!result.blockers.length&&<><b>Blockers</b><ul>{result.blockers.map(x=><li key={x}>{x}</li>)}</ul></>}{!!result.warnings.length&&<><b>Verify before leaving</b><ul>{result.warnings.map(x=><li key={x}>{x}</li>)}</ul></>}<p><b>Can I go now?</b> {result.canGoNow==="GO"?"Demo rules say yes; verify official details.":result.canGoNow==="VERIFY"?"Confirm the warnings first.":"Demo rules indicate you should not go yet."}</p><button className="btn soft" onClick={reset}>Check another service</button></section>}
-</main><footer className="wrap">OneTrip beginner demo · Sample data is illustrative and may be inaccurate. Confirm documents, fees, office hours and appointments with official sources.</footer></>}
+
+import { DemoOne } from "@/components/ui/demo";
+import { useMemo, useState } from "react";
+import { services, type Service } from "../data/services";
+
+type Result = {
+  status: "READY" | "VERIFY" | "BLOCKED";
+  blockers: string[];
+  warnings: string[];
+  officeOpenNow: boolean;
+  canGoNow: "GO" | "VERIFY" | "DONT_GO";
+};
+
+export default function Home() {
+  const [q, setQ] = useState("");
+  const [selected, setSelected] = useState<Service | null>(null);
+  const [checked, setChecked] = useState<string[]>([]);
+  const [appointment, setAppointment] = useState(false);
+  const [result, setResult] = useState<Result | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const matches = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return s
+      ? services.filter((x) => `${x.name} ${x.organisation} ${x.description}`.toLowerCase().includes(s))
+      : services;
+  }, [q]);
+
+  function choose(service: Service) {
+    setSelected(service);
+    setQ(service.name);
+    setChecked([]);
+    setAppointment(false);
+    setResult(null);
+    setError("");
+  }
+
+  async function check() {
+    if (!selected) return;
+    setBusy(true);
+    setError("");
+    try {
+      const r = await fetch("/api/readiness", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serviceId: selected.id,
+          checkedDocumentIds: checked,
+          appointmentConfirmed: appointment,
+        }),
+      });
+
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Could not check");
+      setResult(data.result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unexpected error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function reset() {
+    setQ("");
+    setSelected(null);
+    setChecked([]);
+    setAppointment(false);
+    setResult(null);
+    setError("");
+  }
+
+  return (
+    <>
+      <header className="top">
+        <div className="wrap">
+          <div className="brand">OneTrip</div>
+        </div>
+      </header>
+
+      <section className="hero">
+        <div className="wrap">
+          <p>GOVERNMENT-SERVICE READINESS CHECKER</p>
+          <h1>Know what could stop you before you leave home.</h1>
+          <p>
+            Choose a service, review the checklist, and check the demo readiness details before visiting an
+            office.
+          </p>
+          <div className="search">
+            <input
+              className="field"
+              placeholder="Search e.g. Income Certificate"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <button
+              className="btn primary"
+              onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Search
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <main className="wrap">
+        <section className="card">
+          <DemoOne />
+        </section>
+
+        <section className="card" id="services">
+          <h2>1. Choose a service</h2>
+          <p className="muted">Edit the sample services in data/services.ts.</p>
+          <div className="options">
+            {matches.map((service) => (
+              <button className="option" key={service.id} onClick={() => choose(service)}>
+                <strong>{service.name}</strong>
+                <br />
+                <span className="muted">
+                  {service.organisation} · {service.district}, {service.state}
+                </span>
+              </button>
+            ))}
+            {!matches.length && <p>No matches. Try another search.</p>}
+          </div>
+        </section>
+
+        {selected && (
+          <>
+            <section className="card">
+              <h2>2. Office details</h2>
+              <div className="grid">
+                <div>
+                  <p className="muted">Organisation</p>
+                  <b>{selected.organisation}</b>
+                </div>
+                <div>
+                  <p className="muted">Location</p>
+                  <b>
+                    {selected.district}, {selected.state}
+                  </b>
+                </div>
+                <div>
+                  <p className="muted">Office</p>
+                  <b>{selected.office}</b>
+                </div>
+                <div>
+                  <p className="muted">Address</p>
+                  <b>{selected.address}</b>
+                </div>
+              </div>
+              <p>{selected.description}</p>
+              <p>
+                <b>Eligibility:</b> {selected.eligibility.join(" ")}
+              </p>
+            </section>
+
+            <section className="card">
+              <h2>3. Document checklist</h2>
+              <p>Tick the documents you already have.</p>
+              {selected.documents.map((document) => (
+                <label className="check" key={document.id}>
+                  <input
+                    type="checkbox"
+                    checked={checked.includes(document.id)}
+                    onChange={() =>
+                      setChecked((old) =>
+                        old.includes(document.id) ? old.filter((x) => x !== document.id) : [...old, document.id]
+                      )
+                    }
+                  />
+                  <span>
+                    <b>{document.name}</b>
+                    <br />
+                    <span className="muted">
+                      {document.original ? "Bring original" : "Copy/photo"} · {document.copies} copy/copies
+                    </span>
+                  </span>
+                </label>
+              ))}
+
+              {selected.appointmentRequired && (
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={appointment}
+                    onChange={(e) => setAppointment(e.target.checked)}
+                  />
+                  <span>
+                    <b>I have a confirmed appointment</b>
+                    <br />
+                    <span className="muted">
+                      This records your answer; it does not verify a real booking.
+                    </span>
+                  </span>
+                </label>
+              )}
+
+              <div className="actions">
+                <button className="btn primary" onClick={check} disabled={busy}>
+                  {busy ? "Checking…" : "Check readiness"}
+                </button>
+                <button className="btn soft" onClick={reset}>
+                  Start over
+                </button>
+              </div>
+
+              {error && <p role="alert">{error}</p>}
+            </section>
+
+            <section className="card">
+              <h2>4. Service information</h2>
+              <div className="meta">
+                <div>
+                  <span className="muted">Indicative demo fee</span>
+                  <br />
+                  <b>₹{selected.fee}</b>
+                </div>
+                <div>
+                  <span className="muted">Listed demo hours</span>
+                  <br />
+                  <b>
+                    {selected.workingHours.open}–{selected.workingHours.close}
+                  </b>
+                </div>
+                <div>
+                  <span className="muted">Payment</span>
+                  <br />
+                  <b>{selected.paymentModes.join(", ")}</b>
+                </div>
+                <div>
+                  <span className="muted">Last marked verified</span>
+                  <br />
+                  <b>{selected.lastVerified}</b>
+                </div>
+                <div>
+                  <span className="muted">Counter</span>
+                  <br />
+                  <b>{selected.counter}</b>
+                </div>
+                <div>
+                  <span className="muted">Form</span>
+                  <br />
+                  <b>{selected.form}</b>
+                </div>
+              </div>
+              <p>
+                <a href={selected.officialSource} target="_blank" rel="noreferrer">
+                  Open official source ↗
+                </a>
+              </p>
+            </section>
+          </>
+        )}
+
+        {result && (
+          <section className={`card status ${result.status}`} aria-live="polite">
+            <p className="muted">YOUR RESULT</p>
+            <h2>{result.status === "READY" ? "✓ READY" : result.status === "VERIFY" ? "⚠ VERIFY" : "✕ BLOCKED"}</h2>
+            <p>
+              {result.status === "READY"
+                ? "Demo checklist passed. Confirm official details before travelling."
+                : result.status === "VERIFY"
+                  ? "Some details need confirmation before travel."
+                  : "One or more checklist or schedule items may prevent a successful visit."}
+            </p>
+
+            {!!result.blockers.length && (
+              <>
+                <b>Blockers</b>
+                <ul>{result.blockers.map((x) => <li key={x}>{x}</li>)}</ul>
+              </>
+            )}
+
+            {!!result.warnings.length && (
+              <>
+                <b>Verify before leaving</b>
+                <ul>{result.warnings.map((x) => <li key={x}>{x}</li>)}</ul>
+              </>
+            )}
+
+            <p>
+              <b>Can I go now?</b>{" "}
+              {result.canGoNow === "GO"
+                ? "Demo rules say yes; verify official details."
+                : result.canGoNow === "VERIFY"
+                  ? "Confirm the warnings first."
+                  : "Demo rules indicate you should not go yet."}
+            </p>
+            <button className="btn soft" onClick={reset}>
+              Check another service
+            </button>
+          </section>
+        )}
+      </main>
+
+      <footer className="wrap">
+        OneTrip beginner demo · Sample data is illustrative and may be inaccurate. Confirm documents, fees, office
+        hours and appointments with official sources.
+      </footer>
+    </>
+  );
+}
+
